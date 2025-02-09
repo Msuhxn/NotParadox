@@ -1,84 +1,196 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>It's Not Paradox</title>
-    <link rel="icon" href="favicon.ico">
-    <style>
-        @keyframes glitch {
-            0% { transform: translate(0); opacity: 1; }
-            20% { transform: translate(-5px, 5px); opacity: 0.8; }
-            40% { transform: translate(5px, -5px); opacity: 1; }
-            60% { transform: translate(-5px, -5px); opacity: 0.8; }
-            80% { transform: translate(5px, 5px); opacity: 1; }
-            100% { transform: translate(0); opacity: 1; }
-        }
-        
-        body {
-            background: black;
-            color: white;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            text-align: center;
-            font-family: 'Courier New', monospace;
-            margin: 0;
-            overflow: hidden;
-        }
-        
-        h1 {
-            font-size: 4em;
-            position: relative;
-            cursor: pointer;
-            animation: glitch 1s infinite;
-            text-shadow: 3px 3px red, -3px -3px blue;
-        }
-        
-        h1:hover {
-            text-shadow: -3px -3px red, 3px 3px blue;
-            transform: rotateY(180deg);
-        }
-        
-        @keyframes backgroundChange {
-            0% { background-color: black; }
-            25% { background-color: darkred; }
-            50% { background-color: darkblue; }
-            75% { background-color: darkgreen; }
-            100% { background-color: black; }
-        }
-        body:hover {
-            animation: backgroundChange 2s infinite;
-        }
-        
-        footer {
-            position: absolute;
-            bottom: 10px;
-            width: 100%;
-            text-align: center;
-            animation: glitch 1s infinite;
-        }
-        
-        a {
-            color: #ff9800;
-            text-decoration: none;
-            margin: 0 10px;
-            font-size: 1.5em;
-            transition: transform 0.5s ease-in-out;
-        }
-        a:hover {
-            transform: scale(1.5) rotate(360deg);
-            text-decoration: underline;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>It's Not Paradox</title>
+  <link rel="icon" href="favicon.ico" />
+  <!-- Retro, monospaced font for a glitch vibe -->
+  <link href="https://fonts.googleapis.com/css?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #fff;
+      --background-color: #000;
+      --glitch-color-1: red;
+      --glitch-color-2: blue;
+      --accent-color: #ff9800;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--background-color);
+      color: var(--primary-color);
+      font-family: 'Share Tech Mono', monospace;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      text-align: center;
+      position: relative;
+    }
+
+    /* Animated Background Gradient */
+    body::before {
+      content: "";
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, darkred, darkblue, darkgreen, black);
+      background-size: 400% 400%;
+      z-index: -2;
+      animation: gradientAnimation 20s ease infinite;
+    }
+
+    @keyframes gradientAnimation {
+      0%   { transform: translate(0, 0) scale(1); }
+      50%  { transform: translate(25%, 25%) scale(1.1); }
+      100% { transform: translate(0, 0) scale(1); }
+    }
+
+    /* Glitch effect on the main heading */
+    h1 {
+      font-size: 4em;
+      position: relative;
+      cursor: pointer;
+      letter-spacing: 0.1em;
+      animation: glitch 2s infinite;
+    }
+    /* Duplicate text layers for the glitch effect */
+    h1::before,
+    h1::after {
+      content: attr(data-text);
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      clip: rect(0, 900px, 0, 0);
+    }
+    h1::before {
+      left: 2px;
+      text-shadow: -2px 0 var(--glitch-color-1);
+      animation: glitchTop 2s infinite linear alternate-reverse;
+    }
+    h1::after {
+      left: -2px;
+      text-shadow: -2px 0 var(--glitch-color-2);
+      animation: glitchBottom 2s infinite linear alternate-reverse;
+    }
+    
+    /* Base glitch animation */
+    @keyframes glitch {
+      0%   { transform: translate(0); }
+      20%  { transform: translate(-5px, 5px); }
+      40%  { transform: translate(5px, -5px); }
+      60%  { transform: translate(-5px, -5px); }
+      80%  { transform: translate(5px, 5px); }
+      100% { transform: translate(0); }
+    }
+
+    /* Glitch slice animation for the top pseudo-element */
+    @keyframes glitchTop {
+      0%   { clip: rect(0, 900px, 0, 0); }
+      10%  { clip: rect(0, 900px, 30px, 0); }
+      20%  { clip: rect(5px, 900px, 35px, 0); }
+      30%  { clip: rect(0, 900px, 0, 0); }
+      40%  { clip: rect(10px, 900px, 40px, 0); }
+      50%  { clip: rect(0, 900px, 0, 0); }
+      60%  { clip: rect(5px, 900px, 35px, 0); }
+      70%  { clip: rect(0, 900px, 0, 0); }
+      80%  { clip: rect(15px, 900px, 45px, 0); }
+      90%  { clip: rect(0, 900px, 0, 0); }
+      100% { clip: rect(0, 900px, 0, 0); }
+    }
+
+    /* Glitch slice animation for the bottom pseudo-element */
+    @keyframes glitchBottom {
+      0%   { clip: rect(0, 900px, 0, 0); }
+      10%  { clip: rect(40px, 900px, 70px, 0); }
+      20%  { clip: rect(35px, 900px, 65px, 0); }
+      30%  { clip: rect(0, 900px, 0, 0); }
+      40%  { clip: rect(50px, 900px, 80px, 0); }
+      50%  { clip: rect(0, 900px, 0, 0); }
+      60%  { clip: rect(45px, 900px, 75px, 0); }
+      70%  { clip: rect(0, 900px, 0, 0); }
+      80%  { clip: rect(55px, 900px, 85px, 0); }
+      90%  { clip: rect(0, 900px, 0, 0); }
+      100% { clip: rect(0, 900px, 0, 0); }
+    }
+
+    /* On hover, disable glitch and add a flip effect */
+    h1:hover {
+      animation: none;
+      transform: rotateY(180deg);
+      transition: transform 0.8s ease;
+    }
+
+    /* Footer styling with animated links */
+    footer {
+      position: absolute;
+      bottom: 20px;
+      width: 100%;
+      text-align: center;
+      font-size: 1.2em;
+      animation: glitch 2s infinite;
+    }
+    footer a {
+      color: var(--accent-color);
+      text-decoration: none;
+      margin: 0 10px;
+      transition: transform 0.5s ease-in-out, color 0.5s ease;
+    }
+    footer a:hover {
+      transform: scale(1.5) rotate(360deg);
+      color: var(--primary-color);
+    }
+
+    /* Hidden message that appears as a surprise */
+    #hidden-message {
+      display: none;
+      margin-top: 20px;
+      font-size: 1.5em;
+      color: var(--accent-color);
+      animation: fadeIn 2s forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+  </style>
 </head>
 <body>
-    <h1>It's Not Paradox</h1>
-    <footer>
-         <a href="https://discord.com/users/paradox.io." target="_blank">Discord</a> |
-        <a href="https://github.com/Msuhxn"_blank">GitHub</a>
-    </footer>
+  <!-- The glitchy heading with a data attribute for the pseudo-elements -->
+  <h1 data-text="It's Not Paradox">It's Not Paradox</h1>
+  
+  <!-- Surprise: Hidden message that toggles on title click -->
+  <div id="hidden-message">Welcome to the glitch zone!</div>
+  
+  <footer>
+    <a href="https://discord.com/users/paradox.io." target="_blank">Discord</a> |
+    <a href="https://github.com/Msuhxn" target="_blank">GitHub</a>
+  </footer>
+
+  <script>
+    // Toggle the hidden message when the title is clicked
+    const title = document.querySelector('h1');
+    const hiddenMessage = document.getElementById('hidden-message');
+    title.addEventListener('click', () => {
+      if (hiddenMessage.style.display === 'none' || hiddenMessage.style.display === '') {
+        hiddenMessage.style.display = 'block';
+      } else {
+        hiddenMessage.style.display = 'none';
+      }
+    });
+  </script>
 </body>
 </html>
