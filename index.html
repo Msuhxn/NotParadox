@@ -15,11 +15,11 @@
       --glitch-color-2: blue;
       --accent-color: #ff9800;
     }
-
+    
     * {
       box-sizing: border-box;
     }
-
+    
     body {
       margin: 0;
       padding: 0;
@@ -35,7 +35,7 @@
       text-align: center;
       position: relative;
     }
-
+    
     /* Animated Background Gradient */
     body::before {
       content: "";
@@ -49,13 +49,13 @@
       z-index: -2;
       animation: gradientAnimation 20s ease infinite;
     }
-
+    
     @keyframes gradientAnimation {
       0%   { transform: translate(0, 0) scale(1); }
       50%  { transform: translate(25%, 25%) scale(1.1); }
       100% { transform: translate(0, 0) scale(1); }
     }
-
+    
     /* Glitch effect on the main heading */
     h1 {
       font-size: 4em;
@@ -96,7 +96,7 @@
       80%  { transform: translate(5px, 5px); }
       100% { transform: translate(0); }
     }
-
+    
     /* Glitch slice animation for the top pseudo-element */
     @keyframes glitchTop {
       0%   { clip: rect(0, 900px, 0, 0); }
@@ -111,7 +111,7 @@
       90%  { clip: rect(0, 900px, 0, 0); }
       100% { clip: rect(0, 900px, 0, 0); }
     }
-
+    
     /* Glitch slice animation for the bottom pseudo-element */
     @keyframes glitchBottom {
       0%   { clip: rect(0, 900px, 0, 0); }
@@ -126,14 +126,14 @@
       90%  { clip: rect(0, 900px, 0, 0); }
       100% { clip: rect(0, 900px, 0, 0); }
     }
-
+    
     /* On hover, disable glitch and add a flip effect */
     h1:hover {
       animation: none;
       transform: rotateY(180deg);
       transition: transform 0.8s ease;
     }
-
+    
     /* Footer styling with animated links */
     footer {
       position: absolute;
@@ -153,7 +153,7 @@
       transform: scale(1.5) rotate(360deg);
       color: var(--primary-color);
     }
-
+    
     /* Hidden message that appears as a surprise */
     #hidden-message {
       display: none;
@@ -173,12 +173,15 @@
   <h1 data-text="It's Not Paradox">It's Not Paradox</h1>
   
   <!-- Surprise: Hidden message that toggles on title click -->
-  <div id="hidden-message">Welcome to the glitch zone!</div>
+  <div id="hidden-message">I am Paradox, or may not be :)</div>
   
   <footer>
     <a href="https://discord.com/users/paradox.io." target="_blank">Discord</a> |
     <a href="https://github.com/Msuhxn" target="_blank">GitHub</a>
   </footer>
+
+  <!-- Hidden YouTube iframe for background music -->
+  <iframe id="youtube-music" src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&controls=0&showinfo=0&autohide=1&loop=1&playlist=dQw4w9WgXcQ" allow="autoplay" style="display:none;"></iframe>
 
   <script>
     // Toggle the hidden message when the title is clicked
