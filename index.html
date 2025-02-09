@@ -161,6 +161,7 @@
       font-size: 1.5em;
       color: var(--accent-color);
       animation: fadeIn 2s forwards;
+      cursor: pointer;
     }
     @keyframes fadeIn {
       from { opacity: 0; }
@@ -173,7 +174,7 @@
   <h1 data-text="It's Not Paradox">It's Not Paradox</h1>
   
   <!-- Surprise: Hidden message that toggles on title click -->
-  <div id="hidden-message">I am Paradox, or may not be :)</div>
+  <div id="hidden-message">Or am I?</div>
   
   <footer>
     <a href="https://discord.com/users/paradox.io." target="_blank">Discord</a> |
@@ -181,18 +182,26 @@
   </footer>
 
   <!-- Hidden YouTube iframe for background music -->
-  <iframe id="youtube-music" src="https://www.youtube.com/watch?v=dQw4w9WgXcQ" allow="autoplay" style="display:none;"></iframe>
+  <!-- Note: Autoplay might be blocked by some browsers unless muted or after user interaction -->
+  <iframe id="youtube-music" src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&controls=0&showinfo=0&autohide=1&loop=1&playlist=dQw4w9WgXcQ" 
+          allow="autoplay" style="display:none;"></iframe>
 
   <script>
     // Toggle the hidden message when the title is clicked
     const title = document.querySelector('h1');
     const hiddenMessage = document.getElementById('hidden-message');
+    
     title.addEventListener('click', () => {
       if (hiddenMessage.style.display === 'none' || hiddenMessage.style.display === '') {
         hiddenMessage.style.display = 'block';
       } else {
         hiddenMessage.style.display = 'none';
       }
+    });
+    
+    // Redirect to the YouTube link when the hidden message is clicked
+    hiddenMessage.addEventListener('click', () => {
+      window.location.href = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
     });
   </script>
 </body>
