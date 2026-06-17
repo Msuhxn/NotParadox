@@ -24,7 +24,6 @@
     --glow-a:rgba(245,166,35,.16);
     --glow-b:rgba(77,166,255,.16);
   }
-  /* theme flip: the other horn takes the lead */
   html[data-horn="false"]{ --primary:var(--false); --secondary:var(--true); }
 
   *{ box-sizing:border-box; }
@@ -43,7 +42,6 @@
     overflow:hidden;
   }
 
-  /* ambient dual glow — the two accents breathing against each other */
   .ambient{
     position:fixed; inset:0; z-index:0; pointer-events:none;
     background:
@@ -56,7 +54,6 @@
     50%    { opacity:1;  transform:scale(1.06); }
   }
 
-  /* CRT overlay: scanlines + vignette + faint flicker */
   .crt{
     position:fixed; inset:0; z-index:9; pointer-events:none;
     background:
@@ -68,7 +65,6 @@
   }
   @keyframes flicker{ 0%,97%,100%{opacity:1} 98%{opacity:.84} 99%{opacity:.96} }
 
-  /* terminal window */
   .window{
     position:relative; z-index:1;
     width:min(760px,100%);
@@ -92,7 +88,14 @@
     margin-left:8px; color:var(--dim); font-size:12.5px;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
-  .titlebar .badge{ margin-left:auto; color:var(--dim); font-size:12px; letter-spacing:.12em; }
+  .snd{
+    margin-left:auto; background:transparent; border:1px solid var(--line);
+    color:var(--dim); font:inherit; font-size:11.5px; letter-spacing:.06em;
+    padding:3px 9px; border-radius:5px; cursor:pointer;
+    transition:color .2s, border-color .2s;
+  }
+  .snd:hover,.snd:focus-visible{ color:var(--secondary); border-color:var(--secondary); outline:none; }
+  .snd[aria-pressed="false"]{ color:#3c4555; }
 
   .screen{ padding:30px 26px 22px; }
 
@@ -102,7 +105,6 @@
   }
   .eyebrow b{ color:var(--secondary); font-weight:500; }
 
-  /* hero */
   .hero{
     font-family:'Space Mono',monospace; font-weight:700;
     font-size:clamp(34px,8vw,62px);
@@ -111,8 +113,7 @@
     text-transform:uppercase;
   }
   .hero::before,.hero::after{
-    content:attr(data-text); position:absolute; inset:0;
-    clip-path:inset(0 0 0 0);
+    content:attr(data-text); position:absolute; inset:0; clip-path:inset(0 0 0 0);
   }
   .hero::before{ color:var(--primary);  transform:translate(0,0); mix-blend-mode:screen; opacity:0; }
   .hero::after { color:var(--secondary); transform:translate(0,0); mix-blend-mode:screen; opacity:0; }
@@ -141,10 +142,9 @@
   .verdict.show{ height:clamp(26px,6vw,40px); opacity:1; }
   .verdict::before{ content:"> "; color:var(--dim); }
 
-  .bio{ color:var(--dim); margin:18px 0 24px; max-width:52ch; font-size:13.5px; }
+  .bio{ color:var(--dim); margin:18px 0 24px; max-width:54ch; font-size:13.5px; }
   .bio .k{ color:var(--paper); }
 
-  /* terminal log + prompt */
   .log{ margin:0 0 6px; white-space:pre-wrap; word-break:break-word; }
   .log .line{ margin:0; }
   .log .ok{ color:var(--primary); }
@@ -174,7 +174,6 @@
     border-radius:4px; padding:1px 6px; font:inherit; font-size:11.5px;
   }
 
-  /* persistent links row */
   .links{ display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
   .links a{
     display:inline-flex; align-items:center; gap:8px;
@@ -197,8 +196,7 @@
   }
 
   @media (prefers-reduced-motion:reduce){
-    .ambient,.crt,.hero.glitch::before,.hero.glitch::after{ animation:none; }
-    .caret{ animation:none; }
+    .ambient,.crt,.hero.glitch::before,.hero.glitch::after,.caret{ animation:none; }
     .crt{ opacity:.6; }
   }
 </style>
@@ -211,7 +209,7 @@
     <div class="titlebar">
       <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
       <span class="path">paradox@notparadox: ~</span>
-      <span class="badge">∞ OR AM I</span>
+      <button class="snd" id="snd" aria-pressed="true" title="toggle ambient sound">♪ sound</button>
     </div>
 
     <div class="screen">
@@ -223,13 +221,13 @@
       <p class="bio">
         Hi, I'm <span class="k">paradox</span>. CS student, IT by day, and the person
         running the box you're currently talking to. This page is the box.
-        Type <span class="k">help</span> to look around.
+        Type <span class="k">help</span> to look around &mdash; or <span class="k">proxmox</span> if you're feeling brave.
       </p>
 
       <div class="log" id="log" aria-live="polite"></div>
 
       <div class="promptline">
-        <span class="ps1">paradox<span class="at">@</span>notparadox:~$</span>
+        <span class="ps1" id="ps1">paradox<span class="at">@</span>notparadox:~$</span>
         <span class="input-wrap">
           <input id="cmd" autocomplete="off" autocapitalize="off" autocorrect="off"
                  spellcheck="false" aria-label="terminal input" />
@@ -248,7 +246,7 @@
         </a>
       </div>
 
-      <p class="hint">try <kbd>help</kbd>, <kbd>whoami</kbd>, <kbd>paradox</kbd> &middot; <kbd>Tab</kbd> completes &middot; <kbd>↑</kbd> recalls</p>
+      <p class="hint">try <kbd>help</kbd>, <kbd>whoami</kbd>, <kbd>paradox</kbd>, <kbd>proxmox</kbd> &middot; <kbd>Tab</kbd> completes &middot; <kbd>↑</kbd> recalls</p>
     </div>
   </main>
 
@@ -261,39 +259,48 @@
   const log     = document.getElementById('log');
   const input   = document.getElementById('cmd');
   const caret   = document.getElementById('caret');
+  const ps1      = document.getElementById('ps1');
+  const sndBtn  = document.getElementById('snd');
   const html    = document.documentElement;
 
   const GH = "https://github.com/Msuhxn";
   const DC = "https://discord.com/users/paradox.io.";
   const RICK = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+  const PS_DEFAULT = 'paradox<span class="at">@</span>notparadox:~$';
 
-  // ---- output helpers ----
-  function out(html_, cls){
+  let mode = 'cmd';   // 'cmd' | 'password' | 'recover_name'
+  let busy = false;   // locks input during the countdown
+
+  // ---------- output ----------
+  function out(content, cls){
     const p = document.createElement('p');
     p.className = 'line' + (cls ? ' ' + cls : '');
-    p.innerHTML = html_;
+    p.innerHTML = content;
     log.appendChild(p);
+    return p;
   }
-  function echo(cmd){
-    out('<span class="muted">paradox@notparadox:~$</span> ' + escapeHtml(cmd));
-  }
+  function echo(cmd){ out('<span class="muted">paradox@notparadox:~$</span> ' + escapeHtml(cmd)); }
   function escapeHtml(s){ return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
   function clear(){ log.innerHTML = ''; }
+  function scroll(){ window.scrollTo(0, document.body.scrollHeight); }
+  function setPrompt(htmlStr){ ps1.innerHTML = htmlStr; }
 
-  // ---- caret tracking (caret sits after typed text) ----
+  // ---------- caret tracking ----------
   const measure = document.createElement('span');
   measure.style.cssText = 'position:absolute;visibility:hidden;white-space:pre;font:inherit;';
   input.parentElement.appendChild(measure);
   function moveCaret(){
-    measure.textContent = input.value.slice(0, input.selectionStart ?? input.value.length);
+    const v = input.value;
+    const shown = (input.type === 'password') ? '•'.repeat(v.length) : v;
+    measure.textContent = shown.slice(0, (input.selectionStart ?? v.length));
     const w = Math.min(measure.offsetWidth, input.offsetWidth - 6);
     caret.style.transform = 'translate(' + w + 'px,2px)';
   }
   ['input','keyup','click','focus'].forEach(e => input.addEventListener(e, moveCaret));
-  input.addEventListener('blur', () => caret.style.opacity = '.35');
+  input.addEventListener('blur',  () => caret.style.opacity = '.35');
   input.addEventListener('focus', () => caret.style.opacity = '1');
 
-  // ---- the paradox itself ----
+  // ---------- the paradox ----------
   let verdictOn = false;
   function flipVerdict(force){
     verdictOn = force === undefined ? !verdictOn : force;
@@ -303,14 +310,14 @@
     if(reduce) return;
     hero.classList.remove('glitch'); void hero.offsetWidth; hero.classList.add('glitch');
   }
-  hero.addEventListener('click', () => { glitch(); flipVerdict(); });
+  hero.addEventListener('click', () => { glitch(); flipVerdict(); blip(700,0.04,0.05); });
   if(!reduce){ setInterval(() => { if(Math.random() < .5) glitch(); }, 4200); }
 
   function runParadox(){
     flipVerdict(true);
     const seq = [
       ['evaluating: "this statement is not paradox"', 'muted'],
-      ['  → not paradox.  resolved.', 'ok'],
+      ['  → not paradox. resolved.', 'ok'],
       ['  → but a statement claiming not to be one... is one.', 'no'],
       ['  → not paradox.', 'ok'],
       ['  → or am i?', 'no'],
@@ -324,12 +331,94 @@
     })();
   }
 
-  // ---- commands ----
+  // ---------- proxmox auth bit ----------
+  function startProxmox(){
+    out('connecting to <span class="ok">Proxmox VE</span> · https://notparadox.de:8006');
+    out('TLS handshake ... ok', 'muted');
+    out('authentication required.');
+    out("type the password, or <span class=\"ok\">forgot</span> to recover &middot; <span class=\"muted\">q</span> to cancel", 'muted');
+    mode = 'password';
+    input.type = 'password';
+    setPrompt('password:');
+    scroll();
+  }
+  function endProxmox(){
+    mode = 'cmd';
+    input.type = 'text';
+    setPrompt(PS_DEFAULT);
+  }
+  function passwordEntry(v){
+    const key = v.trim().toLowerCase();
+    if(['q','exit','cancel'].includes(key)){
+      out('<span class="muted">password:</span> ' + escapeHtml(v.trim()));
+      out('cancelled.', 'muted'); endProxmox(); scroll(); return;
+    }
+    if(key === 'forgot'){
+      out('<span class="muted">password:</span> forgot');
+      out('password recovery initiated ...', 'muted');
+      out('to verify it\'s really you, answer the security question:');
+      out("  <span class=\"ok\">what is paradox's real name?</span>");
+      mode = 'recover_name';
+      input.type = 'text';
+      setPrompt('answer:');
+      scroll(); return;
+    }
+    out('<span class="muted">password:</span> ' + '•'.repeat(v.length));
+    out('✗ incorrect password.', 'no');
+    out("forgot it? type <span class=\"ok\">forgot</span>. otherwise try again, or <span class=\"muted\">q</span> to cancel.", 'muted');
+    scroll();
+  }
+  function nameEntry(v){
+    const ans = v.trim();
+    const key = ans.toLowerCase();
+    out('<span class="muted">answer:</span> ' + escapeHtml(ans));
+    if(['q','exit','cancel'].includes(key)){ out('cancelled.', 'muted'); endProxmox(); scroll(); return; }
+    const norm = key.replace(/[^a-z ]/g,'').replace(/\s+/g,' ').trim();
+    if(norm.includes('suhan')){
+      endProxmox();
+      niceTry();
+    } else {
+      out('wrong answer.', 'no');
+      out('that\'s not it. connection closed.', 'muted');
+      endProxmox(); scroll();
+    }
+  }
+  function niceTry(){
+    busy = true;
+    out('Nice try.', 'no');
+    out('knowing the name was never the hard part.', 'muted');
+    const flavor = {
+      8:'  ↳ bouncing through 7 countries you can\'t pronounce',
+      5:'  ↳ asking the homelab very politely',
+      2:'  ↳ almost there. don\'t blink.'
+    };
+    const status = out('', 'ok');
+    let n = 10;
+    (function tick(){
+      if(n <= 0){
+        status.remove();
+        out('connection established → <span class="muted">/dev/null</span>', 'no');
+        out('...kidding. paradox doesn\'t keep the good stuff on a public website.', 'muted');
+        out('but hey — you got the name right. that\'s basically the password. 😏', 'ok');
+        beepUp();
+        busy = false; input.focus(); scroll(); return;
+      }
+      if(flavor[n]){ out(flavor[n], 'muted'); }
+      status.innerHTML = 'establishing secure tunnel ... <span class="muted">' + n + '</span>';
+      log.appendChild(status); // keep the counter as the last line
+      blip(520, 0.03, 0.04);
+      n--; scroll();
+      setTimeout(tick, reduce ? 120 : 1000);
+    })();
+  }
+
+  // ---------- commands ----------
   const commands = {
     help(){
       out('available commands:');
       out('  <span class="ok">whoami</span>    who is paradox');
       out('  <span class="ok">paradox</span>   resolve the unresolvable');
+      out('  <span class="ok">proxmox</span>   access the homelab (good luck)');
       out('  <span class="ok">socials</span>   where to find me');
       out('  <span class="ok">stack</span>     what i build with');
       out('  <span class="ok">theme</span>     flip the accent (' + (html.dataset.horn==='false'?'blue':'amber') + ' now)');
@@ -355,6 +444,7 @@
       out('  proxmox · cloudflare tunnels · intune/entra · pyqt6');
     },
     paradox(){ runParadox(); },
+    proxmox(){ startProxmox(); },
     theme(arg){
       const next = arg ? (arg==='blue'?'false':'true')
                        : (html.dataset.horn==='false'?'true':'false');
@@ -365,12 +455,9 @@
     cls(){ clear(); },
     date(){ out(new Date().toString()); },
     echo(...a){ out(a.join(' ') || ''); },
-    ls(){ out('whoami  paradox  socials  stack  <span class="muted">.secrets</span>'); },
+    ls(){ out('whoami  paradox  proxmox  socials  stack  <span class="muted">.secrets</span>'); },
     // ---- not on the help list ----
-    f1(){
-      out('<span class="ok">🏁 lights out and away we go.</span>');
-      out('  P1 · fastest lap · simply lovely.');
-    },
+    f1(){ out('<span class="ok">🏁 lights out and away we go.</span>'); out('  33 · Flying Dutchman · simply lovely.'); },
     verstappen(){ return this.f1(); },
     redbull(){ out('gives you wings. also pole position.'); },
     sudo(){ out('paradox is not in the sudoers file. this incident will be reported.', 'no'); },
@@ -379,10 +466,7 @@
       else out('rm: missing operand', 'muted');
     },
     rick(){ return this.rickroll(); },
-    rickroll(){
-      out('you know the rules. <span class="muted">(and so do i)</span>');
-      window.open(RICK,'_blank','noopener');
-    },
+    rickroll(){ out('you know the rules. <span class="muted">(and so do i)</span>'); window.open(RICK,'_blank','noopener'); },
     exit(){ out('there is no exit. or am i?', 'no'); },
     matrix(){ out('wrong franchise. but respect.', 'muted'); }
   };
@@ -399,40 +483,107 @@
     else out('command not found: ' + escapeHtml(name) + ' <span class="muted">— try \'help\'</span>', 'no');
     scroll();
   }
-  function scroll(){ window.scrollTo(0, document.body.scrollHeight); }
 
-  // ---- input: history + tab complete ----
+  // ---------- input: dispatch + history + tab ----------
   const history = []; let hist = -1;
   input.addEventListener('keydown', e => {
     if(e.key === 'Enter'){
+      if(busy){ e.preventDefault(); return; }
       const v = input.value;
-      if(v.trim()){ history.push(v); hist = history.length; }
       input.value = ''; moveCaret();
+      blip(440, 0.06, 0.06);
+      if(mode === 'password'){ passwordEntry(v); return; }
+      if(mode === 'recover_name'){ nameEntry(v); return; }
+      if(v.trim()){ history.push(v); hist = history.length; }
       run(v);
-    } else if(e.key === 'ArrowUp'){
+    } else if(e.key === 'ArrowUp' && mode === 'cmd'){
       e.preventDefault();
       if(hist > 0){ hist--; input.value = history[hist]; moveCaret(); }
-    } else if(e.key === 'ArrowDown'){
+    } else if(e.key === 'ArrowDown' && mode === 'cmd'){
       e.preventDefault();
       if(hist < history.length-1){ hist++; input.value = history[hist]; }
       else { hist = history.length; input.value = ''; }
       moveCaret();
-    } else if(e.key === 'Tab'){
+    } else if(e.key === 'Tab' && mode === 'cmd'){
       e.preventDefault();
       const part = input.value.trim().toLowerCase();
       if(!part) return;
-      const pool = NAMES.filter(n => !HIDDEN.includes(n));
-      const hit = pool.find(n => n.startsWith(part));
+      const hit = NAMES.filter(n => !HIDDEN.includes(n)).find(n => n.startsWith(part));
       if(hit){ input.value = hit; moveCaret(); }
+    } else if(e.key.length === 1){
+      blip(680 + Math.random()*180, 0.018, 0.03);
     }
   });
 
-  // clicking anywhere (not a link) focuses the prompt
   document.addEventListener('click', e => {
-    if(!e.target.closest('a')) input.focus();
+    if(e.target.closest('a') || e.target.closest('#snd')) return;
+    input.focus();
   });
 
-  // ---- boot sequence ----
+  // ---------- Web Audio: ambient CRT soundscape ----------
+  let actx = null, master = null, soundOn = true;
+  function ensureAudio(){
+    if(actx){ if(actx.state === 'suspended') actx.resume(); return; }
+    try{
+      actx = new (window.AudioContext || window.webkitAudioContext)();
+    }catch(err){ return; }
+    master = actx.createGain();
+    master.gain.value = 0;
+    master.connect(actx.destination);
+    buildAmbient();
+  }
+  function buildAmbient(){
+    const bus = actx.createGain(); bus.gain.value = 0.55; bus.connect(master);
+    // low hum (mains-ish)
+    const o1 = actx.createOscillator(); o1.type='sine'; o1.frequency.value=57;
+    const o2 = actx.createOscillator(); o2.type='sine'; o2.frequency.value=114;
+    const og = actx.createGain(); og.gain.value=0.05;
+    o1.connect(og); o2.connect(og); og.connect(bus); o1.start(); o2.start();
+    // slow shimmer
+    const lfo = actx.createOscillator(); lfo.frequency.value=0.08;
+    const lg = actx.createGain(); lg.gain.value=0.018; lfo.connect(lg); lg.connect(og.gain); lfo.start();
+    // faint static hiss
+    const buf = actx.createBuffer(1, actx.sampleRate*2, actx.sampleRate);
+    const d = buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1);
+    const noise = actx.createBufferSource(); noise.buffer=buf; noise.loop=true;
+    const nf = actx.createBiquadFilter(); nf.type='bandpass'; nf.frequency.value=2200; nf.Q.value=0.6;
+    const ng = actx.createGain(); ng.gain.value=0.01;
+    noise.connect(nf).connect(ng).connect(bus); noise.start();
+  }
+  function setSound(on){
+    soundOn = on;
+    sndBtn.setAttribute('aria-pressed', String(on));
+    sndBtn.textContent = on ? '♪ sound' : '♪ muted';
+    if(on){
+      ensureAudio();
+      if(master){ master.gain.cancelScheduledValues(actx.currentTime);
+        master.gain.linearRampToValueAtTime(0.6, actx.currentTime + 0.4); }
+    } else if(master){
+      master.gain.cancelScheduledValues(actx.currentTime);
+      master.gain.linearRampToValueAtTime(0.0001, actx.currentTime + 0.25);
+    }
+  }
+  function blip(freq, dur, vol){
+    if(!soundOn || !actx) return;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type='square'; o.frequency.value=freq;
+    const t = actx.currentTime;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(master); o.start(t); o.stop(t + dur + 0.03);
+  }
+  function beepUp(){ blip(523,0.08,0.07); setTimeout(()=>blip(784,0.12,0.07),90); }
+
+  sndBtn.addEventListener('click', () => setSound(!soundOn));
+
+  // start audio on the first real gesture (browsers require it)
+  let gestured = false;
+  function onGesture(){ if(gestured) return; gestured = true; if(soundOn) setSound(true); }
+  document.addEventListener('pointerdown', onGesture, { once:false });
+  document.addEventListener('keydown', onGesture, { once:false });
+
+  // ---------- boot ----------
   const boot = [
     ['booting notparadox.de ...', 'muted'],
     ['  [ ok ] mounting /self', 'ok'],
@@ -448,8 +599,7 @@
     })();
   }
   if(reduce){
-    boot.forEach(b => out(b[0], b[1]));
-    input.focus(); moveCaret();
+    boot.forEach(b => out(b[0], b[1])); input.focus(); moveCaret();
   } else {
     setTimeout(typeBoot, 350);
     setTimeout(glitch, 600);
