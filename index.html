@@ -1,3 +1,4 @@
+<!--
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -606,6 +607,391 @@
   }
   moveCaret();
 })();
+</script>
+</body>
+</html>
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Colloquium Teleprompter</title>
+<style>
+  :root{
+    --ink:#141a22; --ink2:#1c242f; --paper:#ece5d5; --dim:#9a9284;
+    --brass:#c9a06a; --brass-soft:rgba(201,160,106,0.14);
+    --teal:#5b929a; --red:#c96a5f; --green:#7fae72; --amber:#d1a94e;
+    --line:rgba(236,229,213,0.14);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;background:var(--ink);color:var(--paper);
+    font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden;}
+  .display{font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif;}
+
+  #app{position:relative;height:100vh;width:100vw;display:flex;flex-direction:column;}
+
+  /* top bar */
+  #topbar{display:flex;justify-content:space-between;align-items:center;
+    padding:16px 28px;border-bottom:1px solid var(--line);flex:0 0 auto;}
+  #progress{font-size:13px;color:var(--dim);letter-spacing:.04em;}
+  #progress b{color:var(--brass);}
+  #timer{font-family:"JetBrains Mono","SF Mono",Consolas,monospace;font-size:20px;font-weight:700;
+    padding:4px 14px;border-radius:20px;border:1px solid var(--line);}
+  #timer.ok{color:var(--green);border-color:var(--green);}
+  #timer.warn{color:var(--amber);border-color:var(--amber);}
+  #timer.over{color:var(--red);border-color:var(--red);}
+  #topbar .hint{font-size:11px;color:var(--dim);}
+
+  /* main stage */
+  #stage{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;
+    padding:40px 8vw;overflow-y:auto;cursor:pointer;}
+  #slideTag{color:var(--brass);font-size:14px;text-transform:uppercase;letter-spacing:.12em;
+    font-weight:700;margin-bottom:6px;}
+  #slideTitle{font-size:clamp(26px,4vw,42px);font-weight:700;margin:0 0 22px;line-height:1.15;}
+  #cues{list-style:none;margin:0;padding:0;}
+  #cues li{font-size:clamp(19px,2.6vw,30px);line-height:1.5;margin-bottom:18px;
+    padding-left:34px;position:relative;color:var(--paper);}
+  #cues li::before{content:"›";position:absolute;left:0;color:var(--brass);font-weight:700;}
+  #cues li.bold{color:var(--brass);font-weight:700;background:var(--brass-soft);
+    padding:10px 16px 10px 40px;border-radius:8px;border-left:3px solid var(--brass);}
+  #cues li.bold::before{left:14px;}
+  #cues li.note{color:var(--dim);font-style:italic;font-size:0.7em;}
+
+  /* bottom bar */
+  #botbar{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;
+    padding:14px 28px;border-top:1px solid var(--line);font-size:12px;color:var(--dim);}
+  #botbar button{background:transparent;border:1px solid var(--line);color:var(--paper);
+    padding:8px 16px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:13px;}
+  #botbar button:hover{border-color:var(--brass);color:var(--brass);}
+
+  /* start screen */
+  #startScreen{position:absolute;inset:0;background:var(--ink);z-index:30;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:40px;}
+  #startScreen .eyebrow{color:var(--brass);letter-spacing:.16em;text-transform:uppercase;
+    font-size:12px;font-weight:700;margin-bottom:10px;}
+  #startScreen h1{font-size:clamp(24px,3.4vw,38px);max-width:900px;margin:0 0 8px;}
+  #startScreen .sub{color:var(--dim);font-size:14px;margin-bottom:30px;}
+  #startBtn{background:var(--brass);color:var(--ink);border:none;padding:16px 40px;
+    border-radius:8px;font-size:18px;font-weight:700;cursor:pointer;margin-bottom:26px;}
+  #startScreen .reminders{max-width:640px;text-align:left;border:1px solid var(--line);
+    border-radius:10px;padding:18px 22px;font-size:13.5px;color:var(--dim);line-height:1.7;}
+  #startScreen .reminders b{color:var(--brass);text-transform:uppercase;font-size:11px;
+    letter-spacing:.06em;display:block;margin-bottom:8px;}
+
+  /* FAQ overlay */
+  #faqOverlay{position:absolute;inset:0;background:var(--ink);z-index:20;display:none;
+    flex-direction:column;padding:30px 6vw;overflow-y:auto;}
+  #faqOverlay.show{display:flex;}
+  #faqOverlay h2{color:var(--brass);font-size:13px;text-transform:uppercase;letter-spacing:.1em;
+    margin-bottom:20px;}
+  .faqItem{border:1px solid var(--line);border-radius:10px;margin-bottom:12px;overflow:hidden;}
+  .faqQ{padding:16px 20px;background:var(--ink2);cursor:pointer;font-size:17px;font-weight:600;
+    display:flex;justify-content:space-between;align-items:center;}
+  .faqA{display:none;padding:6px 20px 18px;font-size:15px;line-height:1.7;color:var(--dim);}
+  .faqA li{margin-bottom:8px;}
+  .faqItem.open .faqA{display:block;}
+  #faqClose{align-self:flex-start;margin-bottom:10px;background:transparent;border:1px solid var(--line);
+    color:var(--paper);padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;}
+
+  #endScreen{display:none;text-align:center;}
+  #endScreen.show{display:block;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="startScreen">
+    <div class="eyebrow">DLBBT02 Colloquium &middot; Presenter Mode</div>
+    <h1 class="display">Agentic AI for Automated Content Planning and Generation</h1>
+    <div class="sub">15 min talk + 15&ndash;20 min Q&amp;A &middot; click or press space to advance</div>
+    <button id="startBtn">Start Presentation</button>
+    <div class="reminders">
+      <b>Quick reminders</b>
+      &bull; Slow down deliberately on slides 6, 12, and 13, these are where follow-up questions concentrate.<br>
+      &bull; If you blank on a number: agentic never scored lower than baseline in either scenario, gains were modest, biggest in controllability and usefulness.<br>
+      &bull; Press <b>F</b> anytime during the talk to open the FAQ backup. Press <b>Esc</b> to return.
+    </div>
+  </div>
+
+  <div id="topbar" style="display:none;">
+    <div id="progress">Slide <b id="curNum">1</b> / 15</div>
+    <div id="timer" class="ok">00:00</div>
+    <div class="hint">space/click = next &middot; &larr; = back &middot; F = FAQ</div>
+  </div>
+
+  <div id="stage" style="display:none;">
+    <div id="slideTag">Slide 1</div>
+    <h2 id="slideTitle" class="display">Title</h2>
+    <ul id="cues"></ul>
+  </div>
+
+  <div id="botbar" style="display:none;">
+    <button id="prevBtn">&larr; Prev</button>
+    <span id="bridgeText"></span>
+    <button id="nextBtn">Next &rarr;</button>
+  </div>
+
+  <div id="faqOverlay">
+    <button id="faqClose">&larr; Back to talk</button>
+    <h2>FAQ Backup &mdash; open only if a matching question comes up</h2>
+    <div id="faqList"></div>
+  </div>
+
+</div>
+
+<script>
+const SLIDES = [
+{title:"Title", tag:"Slide 1", cues:[
+  {t:"Good afternoon, thank you for being here."},
+  {t:"My name is Mohammed Suhan, and today I'm presenting my bachelor thesis: \u201cAgentic AI for Automated Content Planning and Generation: A Lightweight Evaluation of Opportunities and Limitations.\u201d"},
+  {t:"The subtitle is really the heart of it. This is a lightweight evaluation of where agentic AI helps, and where it does not.", bold:true},
+  {t:"Let me walk you through it."}
+]},
+{title:"Agenda", tag:"Slide 2", cues:[
+  {t:"Here's the path for the next fifteen minutes. (Point down the list as you go)"},
+  {t:"I'll start with the problem and my four research questions."},
+  {t:"Then the core distinction: prompt-based vs agentic."},
+  {t:"How I evaluated it, and the five criteria I used."},
+  {t:"The prototype I built, and the two scenarios I tested."},
+  {t:"And I'll close with what I actually found, including the honest limitations."}
+]},
+{title:"Why This Topic", tag:"Slide 3", cues:[
+  {t:"(Point to subtitle) Fluent does not mean controllable.", bold:true},
+  {t:"(Read the highlighted line) The question is not whether AI can write. It's whether a structured workflow makes the process more transparent and useful."},
+  {t:"LLMs have moved from one-shot answers to multi-step workflows that plan, draft, review, and refine."},
+  {t:"But prompting hides the planning. You see the answer, not the reasoning behind it."},
+  {t:"And in academic and professional writing, structure and accountability genuinely matter."},
+  {t:"So that's the problem. Now here is exactly what I set out to answer."}
+]},
+{title:"Research Questions", tag:"Slide 4", cues:[
+  {t:"Four research questions guided the whole thesis. (Point to each as you go)"},
+  {t:"The first two are conceptual: what agentic AI actually is, and how it differs from prompt-based generation in structure, autonomy, and task decomposition."},
+  {t:"The third weighs the opportunities against the limitations."},
+  {t:"The fourth is the practical test: is a lightweight agentic prototype genuinely suitable for simple academic or professional content tasks."},
+  {t:"Everything I talk about today maps back to these four.", bold:true}
+]},
+{title:"Aim and Scope", tag:"Slide 5", cues:[
+  {t:"A word on scope, because it shapes everything that follows."},
+  {t:"This is primarily a theoretical and analytical thesis, with a small Python prototype as supporting evidence."},
+  {t:"It's not a production system, not a large benchmark, and not a claim of autonomous writing."},
+  {t:"The scope is deliberately narrow: simple, lightweight content tasks."},
+  {t:"And when I say agentic, I mean a bounded, structured workflow, the kind described by Wang and Guo and their co-authors. Not a system with full independence."},
+  {t:"(Point to figure) This figure shows the arc: theory, then prototype, then evaluation."}
+]},
+{title:"Prompt-Based vs Agentic", tag:"Slide 6", cues:[
+  {t:"(Point to table) This is the conceptual core of the thesis."},
+  {t:"Both approaches use the same underlying model. What changes is the shape of the workflow.", bold:true},
+  {t:"Prompt-based is one step. Instruction in, text out, and the planning stays hidden."},
+  {t:"Agentic splits the same task into explicit stages: plan, draft, review, refine."},
+  {t:"Those intermediate outputs get saved, so you can actually open them and inspect them."},
+  {t:"And human control is no longer just before and after. It's spread across checkpoints."},
+  {t:"I want to be honest about the trade-off: you gain visibility and control, and in exchange you add complexity. And you're still dependent on prompt quality.", bold:true}
+]},
+{title:"What Makes a Workflow \u201cAgentic\u201d", tag:"Slide 7", cues:[
+  {t:"(Point to diagram) From the literature, agentic systems share a small set of building blocks."},
+  {t:"Planning and task decomposition."},
+  {t:"A reasoning, review, and refinement loop."},
+  {t:"Tool use and orchestration."},
+  {t:"And some way of passing memory or context between steps."},
+  {t:"The figure shows these arranged around the LLM core: plan, act, review, improve."},
+  {t:"One caveat I keep throughout the thesis: words like \u201cplanning\u201d and \u201creasoning\u201d here are functional descriptions. They don't imply human understanding. They're structured prompting patterns, and they depend on the model and the system design.", bold:true}
+]},
+{title:"Method", tag:"Slide 8", cues:[
+  {t:"My method is a comparative case study. I run the same task two ways, baseline and agentic, and compare."},
+  {t:"(Point to figure) The design has three parts: a literature review, the prototype, and a qualitative evaluation."},
+  {t:"I chose qualitative on purpose. BLEU and ROUGE compare against a reference text, but for an outline or a refined paragraph there simply is no single correct answer."},
+  {t:"So instead I defined criteria that actually capture what matters here."},
+  {t:"And to be clear: all inputs are synthetic. There's no personal or confidential data anywhere in this."}
+]},
+{title:"Five Evaluation Criteria", tag:"Slide 9", cues:[
+  {t:"I evaluated against five qualitative criteria, and they tie directly back to the research questions. (Point to each)"},
+  {t:"Coherence: do the ideas connect and flow."},
+  {t:"Structure quality: is it well organized, clear headings and sequencing."},
+  {t:"Controllability: can the user inspect, guide, and correct the process. This is the one most specific to agentic workflows."},
+  {t:"Consistency: does the output stay on task without drifting."},
+  {t:"Practical usefulness: is it genuinely a helpful starting point."},
+  {t:"These five are implemented in the evaluator and applied to every single output."}
+]},
+{title:"The Prototype", tag:"Slide 10", cues:[
+  {t:"(Point to diagram) So here's what I actually built: a small terminal-based Python tool called agentic-content-planner."},
+  {t:"The top row and bottom row aren't two separate paths, they're two functional pairs. A planner that creates the structure, a writer that drafts from that plan, feeding straight down into a reviewer that critiques it, and a refiner that revises based on that review."},
+  {t:"(Point along the arrow) Outline generation actually runs through both rows, all four agents. Draft refinement enters directly at the bottom, since a draft already exists, no need to plan or write from scratch."},
+  {t:"Each stage writes its output to a file, so the whole process stays inspectable."},
+  {t:"The baseline, by contrast, is one single direct call."},
+  {t:"I want to be precise here: these are sequential functions, not autonomous agents. There's no persistent memory and no autonomous tool selection. That was a deliberate, lightweight choice.", bold:true}
+]},
+{title:"Two Scenarios", tag:"Slide 11", cues:[
+  {t:"I tested two scenarios, and I picked them because they isolate the two core moves of content work: planning and revising."},
+  {t:"Scenario 1, outline generation. Topic: benefits and limitations of AI-assisted academic writing. Baseline is one prompt to an outline. Agentic is plan, draft, review, refine."},
+  {t:"Scenario 2, draft refinement. Input is a short, rough paragraph. Baseline polishes it in one prompt. Agentic first produces an explicit review, then refines against it."},
+  {t:"(Note to self: in Scenario 2 the planner and writer are skipped, because a draft already exists. Say this if asked.)", note:true},
+  {t:"Two scenarios is a limitation, and I'll come back to that. But it keeps the comparison clean and something I can actually analyze qualitatively."}
+]},
+{title:"Results", tag:"Slide 12", cues:[
+  {t:"(Point to table) Here are the results, shown per scenario so you can see exactly where the gains came from."},
+  {t:"In both scenarios, agentic never scored lower than baseline. Where it tied, it tied at the ceiling, not the floor.", bold:true},
+  {t:"In outline generation, structure quality tied at 5, both approaches already hit the maximum there. The agentic gain shows up instead in coherence, controllability, and consistency."},
+  {t:"In draft refinement, coherence and consistency tied at 4, the paragraph was already coherent either way. But controllability and usefulness both jumped a full point, because the review step made the revision reasoning explicit."},
+  {t:"Where agentic clearly wins is process visibility and the quality of the revision step. Not in producing new knowledge."}
+]},
+{title:"Opportunities and Limitations", tag:"Slide 13", cues:[
+  {t:"I think it's important to be balanced here. (Point to both columns)"},
+  {t:"The opportunities are real. The saved intermediate files make the process visible. The planning and review steps improve structure. And control shifts toward the human."},
+  {t:"But the limitations are just as real, and I don't hide them in the thesis."},
+  {t:"It does not remove hallucination or factual error. Outputs vary run to run."},
+  {t:"And critically: a reviewer using the same model can miss the very errors it's supposed to catch.", bold:true},
+  {t:"More stages also mean more complexity and more places to fail."},
+  {t:"So my practical conclusion is conditional. Use agentic when structure and inspection genuinely add value. For a short, simple task, the plain baseline is faster and good enough."}
+]},
+{title:"Conclusion", tag:"Slide 14", cues:[
+  {t:"To conclude, let me answer the questions directly. (Point to each)"},
+  {t:"RQ1 and RQ2: agentic AI is best understood as a structured, multi-stage LLM workflow. Not autonomy."},
+  {t:"RQ3: the gains are in transparency and control. Accuracy and consistency remain genuine constraints."},
+  {t:"RQ4: the prototype is well suited to lightweight planning and refinement, as long as the human stays responsible for judgment, sources, and integrity."},
+  {t:"In this context, agentic AI is an assistant, not an author.", bold:true},
+  {t:"Future work would widen this: more scenarios, more than one model, human raters alongside my own scoring, and retrieval-based fact checking."}
+]},
+{title:"Thank You", tag:"Slide 15", cues:[
+  {t:"Thank you for listening. I'm happy to take your questions."},
+  {t:"(Pause. Don't rush to fill the silence. Let them ask.)", note:true}
+]}
+];
+
+const FAQ = [
+{q:"Why only qualitative? Why not BLEU, ROUGE, or a user study?", a:[
+  "No single correct reference output exists for an outline or a refined paragraph",
+  "BLEU, ROUGE, BERTScore all measure overlap against a reference",
+  "They'd miss exactly what I care about: controllability, transparency, usefulness",
+  "My five criteria map directly to the research questions",
+  "Cost is subjectivity, which I list as a limitation",
+  "Next step: human raters plus selected quantitative metrics"
+]},
+{q:"Your scores are your own judgments on only two scenarios. How reliable is that?", a:[
+  "Compact and qualitative by design, I don't present it as a benchmark",
+  "Bias reduced three ways: (1) criteria fixed in advance in the evaluator, (2) every score logged with a written justification, (3) deterministic mock mode makes artifacts reproducible",
+  "I interpret results conservatively: supporting evidence for the literature analysis, not statistical proof"
+]},
+{q:"If the reviewer uses the same model, can it really catch hallucinations?", a:[
+  "Often it cannot, and I say so explicitly in the thesis",
+  "A same-architecture reviewer can miss the very errors it should catch",
+  "That's precisely why the workflow improves transparency and control, not factual correctness",
+  "And why human oversight and source verification stay essential",
+  "The agentic gain is process visibility, not guaranteed accuracy"
+]},
+{q:"What is genuinely \u201cagentic\u201d here if it's just sequential function calls?", a:[
+  "Fair point, and it's deliberate scoping",
+  "I use \u201cagentic\u201d in the bounded sense from Wang and Guo: structured sequencing of plan, act, review, refine, with explicit intermediate outputs",
+  "No persistent memory, no autonomous tool selection, on purpose",
+  "Keeps the system lightweight and reduces risk at bachelor level",
+  "Demonstrates the workflow principles without overclaiming autonomy"
+]},
+{q:"When is the agentic workflow worth the extra complexity?", a:[
+  "When the task benefits from structure, intermediate inspection, and iterative revision",
+  "And when controllability matters, for example outline planning",
+  "For short, simple tasks the baseline is faster and good enough",
+  "Every extra stage adds files, prompts, and failure points, and a weak plan propagates downstream",
+  "Rule: adopt agentic when decomposition adds real value, not because it looks more advanced"
+]},
+{q:"How would this scale to real research?", a:[
+  "It would need retrieval-augmented verification, persistent memory, and external tool use",
+  "Each adds capability but also risk",
+  "So it must stay governed by trustworthy-AI principles (NIST, EU guidance)"
+]}
+];
+
+let idx = 0;
+let seconds = 0;
+let timerHandle = null;
+let started = false;
+
+const stage = document.getElementById('stage');
+const topbar = document.getElementById('topbar');
+const botbar = document.getElementById('botbar');
+const startScreen = document.getElementById('startScreen');
+const faqOverlay = document.getElementById('faqOverlay');
+const timerEl = document.getElementById('timer');
+const curNumEl = document.getElementById('curNum');
+const slideTag = document.getElementById('slideTag');
+const slideTitle = document.getElementById('slideTitle');
+const cuesEl = document.getElementById('cues');
+const bridgeText = document.getElementById('bridgeText');
+
+function renderSlide(){
+  const s = SLIDES[idx];
+  slideTag.textContent = s.tag;
+  slideTitle.textContent = s.title;
+  curNumEl.textContent = idx + 1;
+  cuesEl.innerHTML = '';
+  s.cues.forEach(c => {
+    const li = document.createElement('li');
+    li.textContent = c.t;
+    if(c.bold) li.classList.add('bold');
+    if(c.note) li.classList.add('note');
+    cuesEl.appendChild(li);
+  });
+  bridgeText.textContent = idx < SLIDES.length - 1 ? ('Next: ' + SLIDES[idx+1].title) : 'End of talk — open the floor';
+  stage.scrollTop = 0;
+}
+
+function nextSlide(){ if(idx < SLIDES.length - 1){ idx++; renderSlide(); } }
+function prevSlide(){ if(idx > 0){ idx--; renderSlide(); } }
+
+function startTimer(){
+  timerHandle = setInterval(() => {
+    seconds++;
+    const m = String(Math.floor(seconds/60)).padStart(2,'0');
+    const s = String(seconds%60).padStart(2,'0');
+    timerEl.textContent = m + ':' + s;
+    timerEl.className = seconds < 720 ? 'ok' : seconds < 900 ? 'warn' : 'over';
+  }, 1000);
+}
+
+document.getElementById('startBtn').addEventListener('click', () => {
+  started = true;
+  startScreen.style.display = 'none';
+  topbar.style.display = 'flex';
+  stage.style.display = 'flex';
+  botbar.style.display = 'flex';
+  renderSlide();
+  startTimer();
+});
+
+stage.addEventListener('click', (e) => {
+  if(!started) return;
+  const rect = stage.getBoundingClientRect();
+  const clickX = e.clientX - rect.left;
+  if(clickX < rect.width/3){ prevSlide(); } else { nextSlide(); }
+});
+
+document.getElementById('nextBtn').addEventListener('click', nextSlide);
+document.getElementById('prevBtn').addEventListener('click', prevSlide);
+
+function openFaq(){ faqOverlay.classList.add('show'); }
+function closeFaq(){ faqOverlay.classList.remove('show'); }
+document.getElementById('faqClose').addEventListener('click', closeFaq);
+
+const faqList = document.getElementById('faqList');
+FAQ.forEach(item => {
+  const div = document.createElement('div');
+  div.className = 'faqItem';
+  const ul = item.a.map(x => '<li>' + x + '</li>').join('');
+  div.innerHTML = '<div class="faqQ"><span>' + item.q + '</span><span>+</span></div><ul class="faqA">' + ul + '</ul>';
+  div.querySelector('.faqQ').addEventListener('click', () => div.classList.toggle('open'));
+  faqList.appendChild(div);
+});
+
+document.addEventListener('keydown', (e) => {
+  if(!started) return;
+  if(faqOverlay.classList.contains('show')){
+    if(e.key === 'Escape') closeFaq();
+    return;
+  }
+  if(e.key === ' ' || e.key === 'ArrowRight'){ e.preventDefault(); nextSlide(); }
+  else if(e.key === 'ArrowLeft'){ prevSlide(); }
+  else if(e.key.toLowerCase() === 'f'){ openFaq(); }
+});
 </script>
 </body>
 </html>
